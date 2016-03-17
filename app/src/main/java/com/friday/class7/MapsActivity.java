@@ -26,6 +26,8 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlay;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
@@ -42,6 +44,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     long[] noZones;
     long noParks;
     Polygon[] polygons;
+    Location myLocation;
+    GroundOverlayOptions parkingMap;
+    GroundOverlay imageOverlay;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,17 +68,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // fused location services
         request = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(5000)
+                .setInterval(2000)
                 .setFastestInterval(1000);
 
         Firebase parkArray = new Firebase(FIREBASE_URL);
-        noParks = 1;
+
 
         parkArray.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                System.out.println("ESTACIONAMIENTO: " + dataSnapshot.getValue());
-                //noParks = dataSnapshot.getChildrenCount();
+                System.out.println("ESTACIONAMIENTO: " + dataSnapshot.getChildrenCount());
+                noParks = dataSnapshot.getChildrenCount();
 
             }
 
@@ -85,15 +91,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         Firebase[] park = new Firebase[(int)noParks];
         for (int i = 0; i < noParks; i++){
-            String temp = "Estacionamiento"+i;
+            String temp = "Estacionamiento"+(i+1);
             park[i] = new Firebase(FIREBASE_URL).child(temp);
 
+            final int finalI = i;
             park[i].addValueEventListener(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
-                    long temp = dataSnapshot.getChildrenCount();
-                    int itemp = (int)temp;
-                    System.out.println("noZones"+itemp+"");
+                    noZones[finalI] = dataSnapshot.getChildrenCount();
+                    System.out.println("noZones"+noZones[finalI]+"");
+
                 }
 
                 @Override
@@ -103,8 +110,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             });
 
         }
+        //testin purposes
+        Firebase zone = new Firebase(FIREBASE_URL).child("Estacionamiento1/Zona0");
+        zone.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                System.out.println("children of zones"+dataSnapshot.getChildrenCount());
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
         //orientado a objetos pendiente!!
-        parkSystem = new long[(int)noParks][2][2];
+        //corregir con datos dinámicos
+        parkSystem = new long[1][2][2];
+        //(int)noZones[0]
 
         //implementar iteracion con json corregido Zona0 no ZonaA
         Firebase carLimit = new Firebase(FIREBASE_URL).child("Estacionamiento1/Zona0/carLimit");
@@ -182,19 +204,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+
         polygons = new Polygon[2];
         //(int)noZones[0]
         // Add a marker in Sydney and move the camera
         // LATITUDE, LONGITUDE
-        LatLng parkCoord = new LatLng(20.736615, -103.454421);
+        LatLng parkCoord = new LatLng(20.736218, -103.454357);
+        LatLng carCood = new LatLng(20.737091, -103.453091);
         mMap.addMarker(new MarkerOptions()
-                        .position(parkCoord)
-                        .title("ITESM Parking LOT")
+                .position(parkCoord)
+                .title("ITESM Parking LOT")
                         //.visible(false)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.car))
-                        .alpha(0.5f));
-        
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(parkCoord, 16));
+                        //.icon(BitmapDescriptorFactory.fromResource(R.drawable.car))
+                .alpha(0.5f));
+
+        parkingMap = new GroundOverlayOptions()
+                .image(BitmapDescriptorFactory.fromResource(R.drawable.car))
+                .position(carCood, 10f, 13f);
+                //.position(new LatLng(myLocation.getLatitude(), myLocation.getLongitude()), 10f, 13f);
+
+
+        imageOverlay = googleMap.addGroundOverlay(parkingMap);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(parkCoord, 17));
         LatLng zone1 = new LatLng(20.736866, -103.453614);
         LatLng zone2 = new LatLng(20.735528, -103.453767);
         LatLng[] pointMap1 = new LatLng[]{new LatLng(20.737596, -103.453963),
@@ -236,8 +267,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
             return;
         }
-
+        mMap.setMyLocationEnabled(true);
         Location location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+
 
         if(location == null){
 
@@ -246,6 +278,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         } else {
             Log.d("location", location.toString());
+            myLocation = location;
         }
     }
 
@@ -275,7 +308,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLocationChanged(Location location) {
-
+        myLocation = location;
         Log.d("LOCATION", location.toString());
     }
 
