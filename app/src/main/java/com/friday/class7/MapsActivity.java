@@ -12,6 +12,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.firebase.client.DataSnapshot;
+import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
+import com.firebase.client.ValueEventListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -21,6 +25,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
@@ -29,14 +34,20 @@ import com.google.android.gms.maps.model.PolygonOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener, GoogleMap.OnPolygonClickListener {
 
+    private static final String FIREBASE_URL = "https://smartpark1.firebaseio.com";
     private GoogleMap mMap;
     private GoogleApiClient googleApiClient;
     private LocationRequest request;
+    long[][][] parkSystem;
+    long[] noZones;
+    long noParks;
+    Polygon[] polygons;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        Firebase.setAndroidContext(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -53,6 +64,109 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
                 .setInterval(5000)
                 .setFastestInterval(1000);
+
+        Firebase parkArray = new Firebase(FIREBASE_URL);
+        noParks = 1;
+
+        parkArray.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                System.out.println("ESTACIONAMIENTO: " + dataSnapshot.getValue());
+                //noParks = dataSnapshot.getChildrenCount();
+
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+        noZones = new long[(int)noParks];
+
+        Firebase[] park = new Firebase[(int)noParks];
+        for (int i = 0; i < noParks; i++){
+            String temp = "Estacionamiento"+i;
+            park[i] = new Firebase(FIREBASE_URL).child(temp);
+
+            park[i].addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    long temp = dataSnapshot.getChildrenCount();
+                    int itemp = (int)temp;
+                    System.out.println("noZones"+itemp+"");
+                }
+
+                @Override
+                public void onCancelled(FirebaseError firebaseError) {
+
+                }
+            });
+
+        }
+        //orientado a objetos pendiente!!
+        parkSystem = new long[(int)noParks][2][2];
+
+        //implementar iteracion con json corregido Zona0 no ZonaA
+        Firebase carLimit = new Firebase(FIREBASE_URL).child("Estacionamiento1/Zona0/carLimit");
+        Firebase currentCars = new Firebase(FIREBASE_URL).child("Estacionamiento1/Zona0/currentCars");
+        System.out.println("noParks "+noParks+"");
+        carLimit.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                parkSystem[0][0][0] = (long) dataSnapshot.getValue();
+                long i = (long) dataSnapshot.getValue();
+
+                System.out.println("geting carlimit: "+i);
+
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+        currentCars.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                parkSystem[0][0][1] = (long) dataSnapshot.getValue();
+                polygons[0].setFillColor(evalColor(parkSystem[0][0][0], parkSystem[0][0][1]));
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+
+        Firebase carLimit2 = new Firebase(FIREBASE_URL).child("Estacionamiento1/Zona1/carLimit");
+        Firebase currentCars2 = new Firebase(FIREBASE_URL).child("Estacionamiento1/Zona1/currentCars");
+        //for(int i = )
+
+
+        carLimit2.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                parkSystem[0][1][0] = (long) dataSnapshot.getValue();
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+        currentCars2.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                parkSystem[0][1][1] = (long) dataSnapshot.getValue();
+                polygons[1].setFillColor(evalColor(parkSystem[0][1][0], parkSystem[0][1][1]));
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+
     }
 
 
@@ -68,38 +182,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
+        polygons = new Polygon[2];
+        //(int)noZones[0]
         // Add a marker in Sydney and move the camera
         // LATITUDE, LONGITUDE
+        LatLng parkCoord = new LatLng(20.736615, -103.454421);
+        mMap.addMarker(new MarkerOptions()
+                        .position(parkCoord)
+                        .title("ITESM Parking LOT")
+                        //.visible(false)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.car))
+                        .alpha(0.5f));
+        
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(parkCoord, 16));
         LatLng zone1 = new LatLng(20.736866, -103.453614);
-        //mMap.addMarker(new MarkerOptions().position(zone1).title("ZONE 1").alpha(0.5f));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(zone1, 15));
-        Polygon polygon0 = mMap.addPolygon(new PolygonOptions()
-                .add(new LatLng(20.737596, -103.453963),
-                        new LatLng(20.737456, -103.453070),
-                        new LatLng(20.736209, -103.453290),
-                        new LatLng(20.736269, -103.454081))
-                .strokeWidth(0)
-                .fillColor(0x3F0000FF));
-
-        polygon0.setClickable(true);
-
         LatLng zone2 = new LatLng(20.735528, -103.453767);
-        //mMap.addMarker(new MarkerOptions().position(zone2).title("ZONE 2").alpha(0.5f));
-       
-        Polygon polygon1 = mMap.addPolygon(new PolygonOptions()
-                .add(new LatLng(20.736112, -103.454094),
-                        new LatLng(20.736054, -103.453300),
-                        new LatLng(20.734704, -103.453509),
-                        new LatLng(20.734758, -103.454222))
-                .strokeWidth(0)
-                .clickable(true)
-                .fillColor(0x3F00FF00));
+        LatLng[] pointMap1 = new LatLng[]{new LatLng(20.737596, -103.453963),
+                new LatLng(20.737456, -103.453070),
+                new LatLng(20.736209, -103.453290),
+                new LatLng(20.736269, -103.454081)};
+        LatLng[] pointMap2 = new LatLng[]{new LatLng(20.736112, -103.454094),
+                new LatLng(20.736054, -103.453300),
+                new LatLng(20.734704, -103.453509),
+                new LatLng(20.734758, -103.454222)};
+        LatLng[][] pointSet = new LatLng[][]{pointMap1, pointMap2};
 
-        polygon1.setClickable(true);
+
+        for (int i = 0; i < polygons.length; i++){
+            polygons[i] = mMap.addPolygon(new PolygonOptions()
+                    .add(pointSet[i])
+                    .strokeWidth(0));
+
+            polygons[i].setClickable(true);
+        }
+
+
+        googleMap.setOnPolygonClickListener(this);
 
 
     }
+
+
 
     @Override
     public void onConnected(Bundle bundle) {
@@ -168,11 +291,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onPolygonClick(Polygon polygon) {
-        Toast.makeText(getApplicationContext(),polygon.toString(),Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),"Zona"+polygon.getId().substring(2),Toast.LENGTH_SHORT).show();
         Intent i = new Intent(this, Main2Activity.class);
+        long maxCar = parkSystem[0][Integer.parseInt(polygon.getId().substring(2))][0],
+                curCar = parkSystem[0][Integer.parseInt(polygon.getId().substring(2))][1];
+        i.putExtra("values",
+                new String[]{"0",
+                        polygon.getId().substring(2),
+                        maxCar+"",
+                        curCar+"",
+                        (maxCar - curCar)+""});
+        System.out.println("Estacionamiento: 0");
+        System.out.println("Zona: "+polygon.getId().substring(2));
+        System.out.println("Max: "+maxCar);
+        System.out.println("ActualCars: "+curCar);
+        System.out.println("Delta: "+(maxCar-curCar)+"");
         startActivity(i);
     }
 
-    //AIzaSyDNPRmRmmLz74NrBAtzs4udDBY528-75HE
-    //AIzaSyBgeNJz9_O1cQHyF-jtFQPAMUE5hotjexY
+    public int evalColor(long maxCar, long curCar){
+        int deltaCar = (int) (maxCar-curCar);
+        System.out.println("maxCar "+maxCar);
+        System.out.println("curCar "+curCar);
+        if(deltaCar == maxCar) return 0x3F0000FF;
+        else if(deltaCar < maxCar && deltaCar >= maxCar/2) return 0x3F00FF00;
+        else if(deltaCar < maxCar/2 && deltaCar >= maxCar/3) return 0x3FFFFF00;
+        else if(deltaCar < maxCar/3 && deltaCar > 0) return 0x3FFFA500;
+        else if(deltaCar == 0) return 0x3FFF0000;
+
+        return 0x3FFFFFFF;
+    }
+
 }
