@@ -9,9 +9,18 @@ android:paddingRight="@dimen/activity_horizontal_margin"
 android:paddingTop="@dimen/activity_vertical_margin"
 tools:context="com.friday.class7.MapsActivity">
 
+    <Button
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:text="EXIT"
+        android:id="@+id/button3"
+        android:layout_alignParentEnd="true"
+        android:layout_below="@+id/frameLayout" />
+
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="460dp"
+        android:id="@+id/frameLayout">
 
         <fragment xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:map="http://schemas.android.com/apk/res-auto"
@@ -29,12 +38,5 @@ tools:context="com.friday.class7.MapsActivity">
             android:layout_gravity="left|center_vertical"
             android:src="@drawable/key" />
     </FrameLayout>
-
-    <ImageButton
-        android:layout_width="100dp"
-        android:layout_height="wrap_content"
-        android:id="@+id/imageButton"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true" />
 
 </RelativeLayout>

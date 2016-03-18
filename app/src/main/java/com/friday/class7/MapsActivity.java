@@ -2,7 +2,6 @@ package com.friday.class7;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
 import android.Manifest;
 
@@ -29,9 +28,18 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Stack;
+import java.util.StringTokenizer;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener, GoogleMap.OnPolygonClickListener {
@@ -49,28 +57,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     GroundOverlay imageOverlay;
 
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_maps);
-        Firebase.setAndroidContext(this);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
 
-        googleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-
-        // fused location services
-        request = LocationRequest.create()
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(2000)
-                .setFastestInterval(1000);
-
+    public void firebaseQuery(){
         Firebase parkArray = new Firebase(FIREBASE_URL);
 
 
@@ -188,7 +176,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
+    }
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_maps);
+        Firebase.setAndroidContext(this);
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+        firebaseQuery();
+        startLocation();
+
+
+
+    }
+
+    public void startLocation(){
+        googleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+
+        // fused location services
+        request = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(2000)
+                .setFastestInterval(1000);
     }
 
 
@@ -205,7 +222,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        polygons = new Polygon[2];
+        polygons = new Polygon[3];
         //(int)noZones[0]
         // Add a marker in Sydney and move the camera
         // LATITUDE, LONGITUDE
@@ -236,12 +253,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 new LatLng(20.736054, -103.453300),
                 new LatLng(20.734704, -103.453509),
                 new LatLng(20.734758, -103.454222)};
-        LatLng[][] pointSet = new LatLng[][]{pointMap1, pointMap2};
+        LatLng[] pointMap3 = new LatLng[]{new LatLng(20.734685, -103.454223),
+                new LatLng(20.734625, -103.453523),
+                new LatLng(20.733316, -103.453716),
+                new LatLng(20.733371, -103.454352)};
+        LatLng[][] pointSet = new LatLng[][]{pointMap1, pointMap2, pointMap3};
 
-
+        //
         for (int i = 0; i < polygons.length; i++){
             polygons[i] = mMap.addPolygon(new PolygonOptions()
                     .add(pointSet[i])
+                    //for unrelated polygons
+                    .fillColor(0x3F0000FF)
                     .strokeWidth(0));
 
             polygons[i].setClickable(true);
@@ -308,8 +331,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLocationChanged(Location location) {
-        myLocation = location;
-        Log.d("LOCATION", location.toString());
+        /*
+        if (location == null)
+            return;
+
+        if (mPositionMarker == null) {
+
+            mPositionMarker = mMap.addMarker(new MarkerOptions()
+                    .flat(true)
+                    .icon(BitmapDescriptorFactory
+                            .fromResource(R.drawable.car))
+                    .anchor(0.5f, 0.5f)
+                    .position(
+                            new LatLng(location.getLatitude(), location
+                                    .getLongitude())));
+        }
+
+        //animateMarker(mPositionMarker, location); // Helper method for smooth
+        // animation
+
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(new LatLng(location
+                .getLatitude(), location.getLongitude())));
+                */
     }
 
     @Override
