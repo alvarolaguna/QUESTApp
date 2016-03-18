@@ -9,6 +9,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import com.firebase.client.DataSnapshot;
@@ -55,6 +56,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Location myLocation;
     GroundOverlayOptions parkingMap;
     GroundOverlay imageOverlay;
+    private ArrayList<Zone> zones = new ArrayList<Zone>();
 
 
 
@@ -113,7 +115,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
         //orientado a objetos pendiente!!
         //corregir con datos dinámicos
-        parkSystem = new long[1][2][2];
+
         //(int)noZones[0]
 
         //implementar iteracion con json corregido Zona0 no ZonaA
@@ -187,10 +189,59 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        firebaseQuery();
+        Intent intent = getIntent();
+        parkSystem = new long[1][3][2];
+        if(intent.getStringExtra("value") != null){
+            loadLocalInfo();
+            setLocalValues();
+        }
+        else{
+            firebaseQuery();
+        }
+
         startLocation();
 
 
+    }
+
+    private void setLocalValues() {
+        for (int i=0; i<parkSystem.length; i++){
+            for (int j = 0; j < parkSystem[0].length; j++){
+                parkSystem[i][j][0] = zones.get(j).getMaxCar();
+                parkSystem[i][j][1] = zones.get(j).getCurCar();
+
+            }
+        }
+    }
+
+    public void loadLocalInfo(){
+        try{
+            InputStream is = getResources().openRawResource(R.raw.parklog);
+            InputStreamReader isr = new InputStreamReader(is);
+            BufferedReader br = new BufferedReader(isr);
+
+            String line = "";
+            StringTokenizer st = null;
+            int row = 0;
+            Zone tmp = null;
+            while ((line = br.readLine()) != null) {
+                st = new StringTokenizer(line, ",");
+                if (tmp == null){
+                    tmp = new Zone(st.nextToken(),Integer.parseInt(st.nextToken()),Integer.parseInt(st.nextToken()));
+                } else {
+                    Zone tmp2 = new Zone(st.nextToken(),Integer.parseInt(st.nextToken()),Integer.parseInt(st.nextToken()));
+                    if(!tmp.getName().equals(tmp2.getName())){
+                        zones.add(tmp);
+                        System.out.println(tmp.getName()+" Max "+tmp.getMaxCar()+" Cur "+tmp.getCurCar());
+                    }else{
+                        tmp2.setCurCar(tmp.getCurCar()+tmp2.getCurCar());
+                    }
+                    tmp = tmp2;
+                }
+            }
+        }catch(IOException ioe){
+            ioe.printStackTrace();
+        }
 
     }
 
@@ -242,7 +293,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
         imageOverlay = googleMap.addGroundOverlay(parkingMap);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(parkCoord, 17));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(parkCoord, 16));
         LatLng zone1 = new LatLng(20.736866, -103.453614);
         LatLng zone2 = new LatLng(20.735528, -103.453767);
         LatLng[] pointMap1 = new LatLng[]{new LatLng(20.737596, -103.453963),
@@ -264,7 +315,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             polygons[i] = mMap.addPolygon(new PolygonOptions()
                     .add(pointSet[i])
                     //for unrelated polygons
-                    .fillColor(0x3F0000FF)
+                    .fillColor(evalColor(parkSystem[0][i][0],parkSystem[0][i][1]))
                     .strokeWidth(0));
 
             polygons[i].setClickable(true);
@@ -381,7 +432,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         System.out.println("Zona: "+polygon.getId().substring(2));
         System.out.println("Max: "+maxCar);
         System.out.println("ActualCars: "+curCar);
-        System.out.println("Delta: "+(maxCar-curCar)+"");
+        System.out.println("Delta: " + (maxCar - curCar) + "");
         startActivity(i);
     }
 
@@ -396,6 +447,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         else if(deltaCar == 0) return 0x3FFF0000;
 
         return 0x3FFFFFFF;
+    }
+
+    public void exit(View v){
+        Intent i = new Intent(this, MainActivity.class);
+        startActivity(i);
     }
 
 }

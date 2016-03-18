@@ -22,7 +22,7 @@
         android:id="@+id/button"
         android:layout_below="@+id/textView"
         android:layout_alignParentStart="true"
-        android:onClick="makeRequest" />
+        android:onClick="readCSV" />
 
     <Button
         android:layout_width="wrap_content"
